@@ -4,13 +4,10 @@ import time
 from telegram.ext import Updater, CommandHandler
 from telegram import Bot
 import telegram.vendor.ptb_urllib3.urllib3 as urllib3
+from openai import OpenAI
 
 # Telegram Bot Token
 TELEGRAM_BOT_TOKEN = "7851775832:AAEtuGXRVLa4VJmKcd6W3BAP7KQGlPv2TEU"
-# DeepSeek API Key
-DEEPSEEK_API_KEY = "your_deepseek_api_key"
-# DeepSeek总结API的URL
-DEEPSEEK_API_URL = "https://api.deepseek.com/summarize"
 # 源群组ID
 SOURCE_GROUP_ID = -4755939234  # 替换为实际的群组ID
 # 目标频道ID
@@ -18,6 +15,13 @@ TARGET_CHANNEL_ID = "@your_channel_name"  # 替换为实际的频道名称或ID
 # proxy
 proxy_url = 'https://127.0.0.1:9090'
 proxy = urllib3.ProxyManager(proxy_url)
+# LLM API
+API_KEY=os.version.get("DEEPSEEK_API_KEY")
+request_url="https://ark.cn-beijing.volces.com/api/v3"
+client = OpenAI(
+        api_key=API_KEY,
+        base_url=request_url
+)
 
 # 存储上一次总结的时间
 last_summary_time = time.time()
@@ -41,17 +45,15 @@ def get_group_chat_history():
 
 # 调用DeepSeek API进行总结
 def summarize_text(text):
-    headers = {
-        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "text": text
-    }
-    response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
-    if response.status_code == 200:
-        return response.json().get("summary")
-    return None
+    completion = client.chat.comletions.create(
+        model="<model endpoint ID>",
+        messages=[
+            {"role": "system", "content": "请帮我对下列聊天记录进行总结"},
+            {"role": "user", "content": text}
+        ]
+    )
+
+    return completion.choice[0].message.content
 
 # 定时任务：每小时总结并转发
 def hourly_summary_and_forward():
